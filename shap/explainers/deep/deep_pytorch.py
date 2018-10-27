@@ -50,9 +50,9 @@ class PyTorchDeepExplainer(Explainer):
         self.multi_output = False
         with torch.no_grad():
             outputs = model(*data)
+            self.num_outputs = outputs.shape[1]
             if outputs.shape[1] > 1:
                 self.multi_output = True
-                self.num_outputs = outputs.shape[1]
 
     def add_target_handle(self, layer):
         input_handle = layer.register_forward_hook(self.get_target_input)
@@ -226,10 +226,11 @@ class PyTorchDeepExplainer(Explainer):
                         x.append(x_temp)
                         data.append(data_temp)
                     for l in range(len(self.interim_inputs_shape)):
-                        phis[l][j] = (sample_phis[l][self.data[l].shape[0]:] * (x[l] - data[l])).mean(0)
+                        phis[l][j] = (sample_phis[l][self.data[l].shape[0]:] * (x[l] - data[l]).cpu().numpy()).mean(0)
                 else:
                     for l in range(len(X)):
-                        phis[l][j] = (sample_phis[l][self.data[l].shape[0]:] * (X[l][j: j + 1] - self.data[l])).mean(0)
+                        phis[l][j] = (sample_phis[l][self.data[l].shape[0]:] *
+                                      (X[l][j: j + 1] - self.data[l]).cpu().numpy()).mean(0)
             output_phis.append(phis[0] if not self.multi_input else phis)
         # cleanup; remove all gradient handles
         for handle in handles:
